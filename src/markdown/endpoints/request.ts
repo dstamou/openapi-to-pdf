@@ -128,7 +128,7 @@ export function generateParameterTableRowMarkdown(
   }
 
   /* NAME */
-  endpoints_str += `|${parameter.name}`;
+  endpoints_str += `|\`${parameter.name}\``;
 
   /* TYPE */
   endpoints_str += generateParameterTableRowTypeColMarkdown(schema);
@@ -157,7 +157,7 @@ export function generateParameterTableRowTypeColMarkdown(
 ): string {
   let endpoints_str = "";
 
-  endpoints_str += `|${schema?.type ?? '-'}`;
+  endpoints_str += `|${schema?.type ? `\`${schema.type}\`` : '-'}`;
 
   return endpoints_str;
 }

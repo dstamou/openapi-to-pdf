@@ -2,6 +2,7 @@ import { deepMerge } from "@/utils/merge"
 import { PdfConfig } from "md-to-pdf/dist/lib/config"
 import * as fs from 'fs';
 import { Config } from "@/types";
+import { document_css } from "@/config/theme";
 
 export const base_config: Partial<Config> = {
   include_cover: true,
@@ -17,6 +18,7 @@ export const base_config: Partial<Config> = {
   pdf_config: {
     page_media_type: 'print',
     highlight_style: 'github-dark',
+    css: document_css,
     pdf_options: {
       printBackground: true, // eslint-disable-line @typescript-eslint/naming-convention
       outline: true,

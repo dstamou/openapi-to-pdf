@@ -287,7 +287,12 @@ export function generateOperationTitleMarkdown(
 ): string {
   let endpoints_str = "";
 
-  endpoints_str += `${h}## \`${method.toUpperCase()} ${path}\`${operation.operationId ? `(${operation.operationId})` : ''}`
+  endpoints_str += `${h}## <span class="method-badge method-${method.toLowerCase()}">${method.toUpperCase()}</span> <span class="operation-path">${path}</span>`;
+
+  if (operation.operationId) {
+    endpoints_str += ` <span class="operation-id">${operation.operationId}</span>`;
+  }
+
   endpoints_str += "\n\n";
 
   return endpoints_str;

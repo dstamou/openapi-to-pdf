@@ -4,6 +4,12 @@ import { generateMediaTypeMarkdown } from ".";
 import { generateSubSectionTocMarkdown, getToc } from "../toc";
 import { Toc } from "@/types";
 
+export type ResponseGroup = {
+  codes: string[],
+  descriptions: Record<string, string | undefined>,
+  response: OpenAPIV3.ResponseObject
+};
+
 export function generateResponsesMarkdown(
   h: string,
   responses: OpenAPIV3.ResponsesObject
@@ -14,21 +20,56 @@ export function generateResponsesMarkdown(
 
   let responses_toc: Toc = [];
 
-  for (const [code, response] of Object.entries(responses)) {
+  /** @ts-expect-error we resolve all references */
+  const groups = groupResponsesByContent(responses);
 
-    const response_title_markdown = generateResponseTitleMarkdown(h, code);
+  for (const group of groups) {
+
+    const response_title_markdown = generateResponseTitleMarkdown(h, group.codes);
 
     responses_toc = [...responses_toc, ...getToc(response_title_markdown)];
 
-    endpoints_str += generateResponseTitleMarkdown(h, code);
+    endpoints_str += response_title_markdown;
 
-    /** @ts-expect-error we resolve all references */
-    endpoints_str += generateResponseMarkdown(h, response);
+    endpoints_str += generateResponseMarkdown(h, group);
   }
 
   const responses_toc_markdown = generateSubSectionTocMarkdown(responses_toc);
 
   return responses_title + responses_toc_markdown + endpoints_str;
+}
+
+/**
+ * Groups response codes that share an identical headers/content shape (e.g. the
+ * same error schema reused across 400/403/404/500/503) so the body table is
+ * rendered once per unique shape instead of once per status code.
+ */
+export function groupResponsesByContent(
+  responses: { [code: string]: OpenAPIV3.ResponseObject }
+): ResponseGroup[] {
+  const groups: ResponseGroup[] = [];
+  const signature_to_group = new Map<string, ResponseGroup>();
+
+  for (const [code, response] of Object.entries(responses)) {
+
+    const signature = JSON.stringify({
+      headers: response.headers ?? null,
+      content: response.content ?? null
+    });
+
+    let group = signature_to_group.get(signature);
+
+    if (!group) {
+      group = { codes: [], descriptions: {}, response };
+      signature_to_group.set(signature, group);
+      groups.push(group);
+    }
+
+    group.codes.push(code);
+    group.descriptions[code] = response.description;
+  }
+
+  return groups;
 }
 
 export function generateResponsesTitleMarkdown(h: string): string {
@@ -42,33 +83,61 @@ export function generateResponsesTitleMarkdown(h: string): string {
 
 export function generateResponseMarkdown(
   h: string,
-  response: OpenAPIV3.ResponseObject
+  group: ResponseGroup
 ): string {
   let endpoints_str = "";
 
-  if (response.description) {
-    endpoints_str += response.description;
+  if (group.codes.length > 1) {
+    endpoints_str += "Applies to:\n\n";
+    for (const code of group.codes) {
+      const description = group.descriptions[code];
+      endpoints_str += `- \`${code} ${getStatusName(code)}\`${description ? `: ${description}` : ""}\n`;
+    }
+    endpoints_str += "\n\n";
+  } else if (group.response.description) {
+    endpoints_str += group.response.description;
     endpoints_str += "\n\n";
   }
 
   /** @ts-expect-error we resolve all references */
-  endpoints_str += generateResponseHeadersMarkdown(h, response.headers);
+  endpoints_str += generateResponseHeadersMarkdown(h, group.response.headers);
 
-  endpoints_str += generateResponseBodyMarkdown(h, response.content);
+  endpoints_str += generateResponseBodyMarkdown(h, group.response.content);
 
 
   return endpoints_str;
 }
 
-export function generateResponseTitleMarkdown(h: string, code: string): string {
+export function generateResponseTitleMarkdown(h: string, codes: string[]): string {
   let endpoints_str = "";
 
-  const title = `${code} ${getStatusName(code)}`;
+  const badges = codes
+    .map((code) => `<span class="status-badge ${getStatusBadgeClass(code)}">${code} ${getStatusName(code)}</span>`)
+    .join(" ");
 
-  endpoints_str += `${h}#### \`${title}\``;
+  endpoints_str += `${h}#### ${badges}`;
   endpoints_str += "\n\n";
 
   return endpoints_str;
+}
+
+/**
+ * Maps a status code to its badge color: 2xx success, 4xx client error,
+ * 5xx server error. Mirrors the same semantics readers already learn from the
+ * method badges on operation titles.
+ */
+export function getStatusBadgeClass(code: string): string {
+  const numeric_code = Number(code);
+
+  if (numeric_code >= 200 && numeric_code < 300) {
+    return 'status-success';
+  } else if (numeric_code >= 400 && numeric_code < 500) {
+    return 'status-warn';
+  } else if (numeric_code >= 500) {
+    return 'status-error';
+  }
+
+  return 'status-neutral';
 }
 
 export function generateResponseHeadersMarkdown(
@@ -113,12 +182,12 @@ export function generateResponseHeadersTableRowMarkdown(
 ): string {
   let endpoints_str = "";
 
-  endpoints_str += `|${key}`;
+  endpoints_str += `|\`${key}\``;
 
   /** @ts-expect-error we resolve all references */
   const schema: OpenAPIV3.SchemaObject = header.schema;
 
-  endpoints_str += `|${schema?.type ?? '-'}`;
+  endpoints_str += `|${schema?.type ? `\`${schema.type}\`` : '-'}`;
 
   if (header.required) {
     endpoints_str += `|Yes`;

@@ -32,7 +32,7 @@ export function generateSchemaBasicTableMarkdown(
   endpoints_str += "|-|-|-|\n";
 
   // type
-  endpoints_str += `|${schema?.type ?? '-'}`;
+  endpoints_str += `|${schema?.type ? `\`${schema.type}\`` : '-'}`;
 
   // example
   if (schema?.example) {
@@ -160,10 +160,10 @@ export function generateSchemaTableRowMarkdown(
   }
 
   /* KEY */
-  endpoints_str += `|${key}`;
+  endpoints_str += `|\`${key}\``;
 
   /* TYPE */
-  endpoints_str += `|${schema.type}`;
+  endpoints_str += `|\`${schema.type}\``;
 
   /* REQUIRED */
   endpoints_str += generateSchemaTableRowRequiredColMarkdown(
@@ -227,7 +227,7 @@ export function generateOneAnyOfSchemaTableRowMarkdown(
   let endpoints_str = "";
 
   /* KEY */
-  endpoints_str += `|${key}`;
+  endpoints_str += `|${key ? `\`${key}\`` : ''}`;
 
   /* TYPE */
   endpoints_str += `|${schema.anyOf ? 'Any of The ' : schema.oneOf ? 'One of The ' : ''}Options`;

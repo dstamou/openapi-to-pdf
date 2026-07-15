@@ -17,15 +17,14 @@ export function genererateTocMarkdown(
     })
   }
 
-  toc_str += `|Section||\n`;
-  toc_str += "|-|-|\n"
+  toc_str += `|Section|\n`;
+  toc_str += "|-|\n"
 
   toc.map((toc_item) => {
 
     const section_title = generateSectionTitleMarkdown(toc_item);
 
-    toc_str += `|${section_title}|`;
-    toc_str += `[Skip](#${toc_item.slug})|\n`;
+    toc_str += `|${section_title}|\n`;
   })
 
   toc_str += "\n\n";
@@ -80,19 +79,13 @@ export function generateSubSectionTocMarkdown(
 }
 
 export function generateSectionTitleMarkdown(toc_item: TocItem): string {
+  const link = `<a href="#${toc_item.slug}">${toc_item.text}</a>`;
+
   if (toc_item.level === 1) {
-    return `**${toc_item.text}**<img width="500" height="1">`;
+    return `**${link}**<img width="500" height="1">`;
   }
 
-  let text = toc_item.text;
+  const indent_px = (toc_item.level - 1) * 20;
 
-  for (let i = 1; i <= toc_item.level - 1; i++) {
-    text = nestInUnorderedListListItem(text);
-  }
-
-  return `${text}`;
-}
-
-export function nestInUnorderedListListItem(text: string): string {
-  return `<ul><li>${text}</li></ul>`;
+  return `<span style="display:inline-block;margin-left:${indent_px}px;">${link}</span>`;
 }
